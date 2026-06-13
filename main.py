@@ -591,11 +591,10 @@ def _end_game(sid,g):
         'team_scores':team_scores,'start_time':g.get('start_time','')
     },room=sid)
 
-# تأكد أن هذا السطر موجود فوق في ملفك، أو استبدل نهاية الملف بالكامل كذا:
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    print(f"✅ مجابيد على: http://localhost:{port}")
+    import os
+    # المنصة تعطي السيرفر بورت تلقائي، وإذا ما لقيته بنشغل على 10000 وهو البورت الافتراضي لـ Render
+    port = int(os.environ.get('PORT', 10000))
+    print(f"🚀 تشغيل لعبة مجابيد على البورت: {port}")
+    # تشغيل السيرفر مباشرة عبر socketio بالاعتماد على eventlet القوي
     socketio.run(app, host='0.0.0.0', port=port, debug=False, allow_unsafe_werkzeug=True)
-else:
-    # هذا السطر السحري اللي يخلي gunicorn يفهم التطبيق بدون كراش!
-    application = socketio
