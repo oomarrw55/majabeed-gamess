@@ -1,0 +1,1288 @@
+bash
+
+cat > /home/claude/mj4/index.html << 'HTMLEOF'
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>مجابيد</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<style>
+:root{
+  --db:#0a0e1a;--mb:#0d1530;--ab:#1a3a6e;
+  --gold:#f0c040;--gold2:#e8a020;
+  --red:#e84444;--green:#44cc88;
+  --cr:#d62828;--cb:#1a1a2e;--r:12px;
+  --ta:#4488ff;--tb:#ff6644;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--db);color:#fff;min-height:100vh;overflow-x:hidden}
+.sc{display:none;min-height:100vh;padding:14px;flex-direction:column}
+.sc.active{display:flex}
+
+/* LOGO */
+.logo{text-align:center;padding:28px 0 14px}
+.logo h1{font-size:3rem;font-weight:900;background:linear-gradient(135deg,var(--gold),var(--gold2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:4px}
+.logo p{color:#88aadd;font-size:.82rem;margin-top:4px}
+
+/* FORM */
+.fg{margin-bottom:12px}
+label{display:block;color:#aaccff;margin-bottom:4px;font-size:.82rem}
+input[type=text],input[type=password],select{width:100%;padding:12px 13px;background:var(--mb);border:1.5px solid var(--ab);border-radius:var(--r);color:#fff;font-size:.95rem;outline:none;font-family:inherit}
+input:focus,select:focus{border-color:var(--gold)}
+input::placeholder{color:#446}
+select option{background:var(--mb)}
+
+/* BUTTONS */
+.btn{width:100%;padding:11px;border:none;border-radius:var(--r);font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#1a0800}
+.btn-gold:active{transform:scale(.97)}
+.btn-outline{background:transparent;border:1.5px solid var(--ab);color:#aaccff;margin-top:6px}
+.btn-red{background:var(--red);color:#fff}
+.btn-green{background:var(--green);color:#002}
+.btn-sm{width:auto;padding:6px 12px;font-size:.78rem}
+.btn-xs{width:auto;padding:4px 9px;font-size:.72rem}
+
+/* AVATAR */
+.av-sec{text-align:center;margin-bottom:16px}
+.av-prev{width:92px;height:92px;border-radius:50%;border:3px solid var(--gold);margin:0 auto 8px;background:var(--ab);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:2.7rem;cursor:pointer}
+.av-prev img{width:100%;height:100%;object-fit:cover}
+
+/* SERVER LIST */
+.srv-card{background:var(--mb);border:1.5px solid var(--ab);border-radius:var(--r);padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:border-color .2s}
+.srv-card:active{border-color:var(--gold)}
+.badge{padding:3px 9px;border-radius:16px;font-size:.7rem;font-weight:700}
+.bw{background:#1a4a2a;color:var(--green)}.bp{background:#4a1a1a;color:var(--red)}
+
+/* PLAYER ROW */
+.pr{display:flex;align-items:center;background:var(--mb);border-radius:9px;padding:8px 11px;margin-bottom:6px;gap:9px}
+.av-sm{width:36px;height:36px;border-radius:50%;background:var(--ab);display:flex;align-items:center;justify-content:center;font-size:1.1rem;overflow:hidden;flex-shrink:0}
+.av-sm img{width:100%;height:100%;object-fit:cover}
+.hb{font-size:.65rem;background:var(--gold);color:#1a0800;padding:2px 7px;border-radius:8px;margin-left:4px;font-weight:700}
+
+/* TABS */
+.tabs{display:flex;gap:6px;margin-bottom:11px}
+.tab{flex:1;padding:8px;border:1.5px solid var(--ab);border-radius:8px;background:transparent;color:#aaccff;font-size:.8rem;cursor:pointer;text-align:center;transition:all .15s}
+.tab.active{background:var(--gold);color:#1a0800;border-color:var(--gold);font-weight:700}
+
+/* ═══════════════════════════════
+   GAME TABLE
+═══════════════════════════════ */
+#gameSc{
+  background:radial-gradient(ellipse at center,#0a1f0a 0%,#050f05 100%);
+  padding:0;overflow:hidden;
+  display:none;flex-direction:column;
+  height:100vh;
+}
+#gameSc.active{display:flex}
+
+.game-wrap{
+  flex:1;display:grid;
+  grid-template-rows:auto 1fr auto;
+  grid-template-columns:1fr;
+  height:100%;
+  overflow:hidden;
+}
+
+/* Top area */
+.g-top{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:6px 10px;background:rgba(0,0,0,.4);
+  border-bottom:1px solid rgba(255,255,255,.08);
+  flex-wrap:wrap;gap:4px;
+}
+.ti{padding:4px 11px;border-radius:18px;font-size:.8rem;font-weight:700;background:var(--gold);color:#1a0800;transition:background .3s,color .3s}
+.ti.my-turn{background:var(--green);color:#002}
+.timer{color:#88ff88;font-size:.75rem;font-family:monospace}
+
+/* Table */
+.g-table{
+  flex:1;
+  position:relative;
+  display:flex;flex-direction:column;
+  justify-content:space-between;
+  align-items:center;
+  padding:6px;
+  overflow:hidden;
+}
+
+/* Opponent positions */
+.opp-top,.opp-bottom{
+  width:100%;display:flex;justify-content:center;gap:6px;
+  flex-wrap:wrap;
+}
+.opp-left,.opp-right{
+  position:absolute;top:50%;transform:translateY(-50%);
+}
+.opp-left{left:4px}
+.opp-right{right:4px}
+
+.opp-box{
+  background:rgba(10,20,50,.88);
+  border:1.5px solid var(--ab);
+  border-radius:9px;padding:5px 8px;
+  text-align:center;min-width:58px;
+  transition:border-color .3s,box-shadow .3s;
+}
+.opp-box.ct{border-color:var(--gold);box-shadow:0 0 12px rgba(240,192,64,.5)}
+.opp-box.team-a{border-color:var(--ta)}
+.opp-box.team-b{border-color:var(--tb)}
+.opp-av{width:28px;height:28px;border-radius:50%;background:var(--ab);display:flex;align-items:center;justify-content:center;font-size:.9rem;margin:0 auto 2px;overflow:hidden}
+.opp-av img{width:100%;height:100%;object-fit:cover}
+.opp-n{font-size:.6rem;color:#aaccff;max-width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.opp-c{font-size:.9rem;font-weight:700;color:var(--gold)}
+
+/* CENTER: field + draw */
+.g-center{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  flex:1;position:relative;
+  width:100%;
+}
+
+/* Field - circular 7 cards */
+.field-circle{
+  position:relative;
+  width:min(240px,60vw);height:min(240px,60vw);
+  margin:0 auto;
+}
+.field-circle .card{
+  position:absolute;
+  transform-origin:center;
+}
+/* Draw pile in center */
+.draw-pile{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  cursor:pointer;z-index:10;
+}
+.draw-back{
+  width:50px;height:72px;border-radius:7px;
+  background:linear-gradient(135deg,#1a2a6e,#0a1240);
+  border:2px solid #3a4a8e;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.2rem;box-shadow:0 4px 12px rgba(0,0,0,.5);
+  transition:transform .1s;
+}
+.draw-back:active{transform:scale(.93)}
+.draw-count-lbl{
+  text-align:center;color:#88ff88;font-size:.65rem;margin-top:3px;
+}
+
+/* Field cards */
+.field-wrap-list{
+  background:rgba(0,50,0,.35);border:2px solid #2a5a2a;
+  border-radius:12px;padding:8px;margin:0 4px;
+}
+.field-lbl{color:#88ff88;font-size:.68rem;margin-bottom:5px;font-weight:600}
+.field-row{display:flex;flex-wrap:wrap;gap:4px;justify-content:center}
+
+/* CARDS */
+.card{
+  width:50px;height:74px;border-radius:7px;background:#fff;
+  border:2px solid #ddd;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;cursor:pointer;
+  flex-shrink:0;user-select:none;position:relative;
+  transition:transform .12s,box-shadow .12s,border-color .12s;
+}
+.card:active{transform:scale(.92)}
+.card.sel{transform:translateY(-14px);box-shadow:0 8px 22px rgba(240,192,64,.9);border-color:var(--gold);border-width:3px}
+.card.fsel{box-shadow:0 0 18px rgba(68,204,136,.95);border-color:var(--green);border-width:3px}
+.card.new-card{animation:cardIn .22s cubic-bezier(.17,.67,.83,.67)}
+@keyframes cardIn{
+  0%{transform:scale(0) rotate(-20deg);opacity:0}
+  60%{transform:scale(1.1) rotate(3deg);opacity:1}
+  100%{transform:scale(1) rotate(0);opacity:1}
+}
+.card.card-fly{animation:cardFly .3s ease-out}
+@keyframes cardFly{
+  0%{transform:translateY(-30px) scale(.8);opacity:0}
+  100%{transform:translateY(0) scale(1);opacity:1}
+}
+.cr{font-size:1.05rem;font-weight:900;line-height:1}
+.cs{font-size:.88rem;line-height:1}
+.card.red .cr,.card.red .cs{color:var(--cr)}
+.card.blk .cr,.card.blk .cs{color:var(--cb)}
+.card.jok{background:linear-gradient(135deg,#1a0040,#400060)}
+.card.jok .cr{color:var(--gold);font-size:1.15rem}
+.card.jok .cs{color:#ff88ff;font-size:.62rem}
+.cpts{position:absolute;top:2px;right:3px;font-size:.48rem;color:#999;font-weight:700}
+.card.red .cpts{color:#c44}
+
+/* BANKS */
+.banks-row{
+  display:flex;gap:5px;justify-content:center;
+  flex-wrap:wrap;padding:4px 6px;
+}
+.bank-box{
+  background:rgba(40,20,0,.55);border:1.5px solid #6a4a00;
+  border-radius:9px;padding:5px 7px;min-width:52px;text-align:center;
+  cursor:pointer;transition:border-color .2s;
+}
+.bank-box:hover{border-color:var(--gold)}
+.bank-box.mine{border-color:#6a4a00}
+.bank-nm{font-size:.6rem;color:#aaccff}
+.bank-cnt{font-size:.8rem;font-weight:700;color:var(--gold)}
+.bank-top{margin-top:2px;display:flex;justify-content:center}
+.bc{width:22px;height:32px;border-radius:3px;background:#fff;border:1px solid #aaa;font-size:.44rem;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.bc.r{color:#d62828}.bc.b{color:#111}.bc.j{background:linear-gradient(135deg,#1a0040,#400060);color:var(--gold)}
+
+/* MY BANK full view */
+.my-bank-full{
+  background:rgba(40,20,0,.5);border:1.5px solid #6a4a00;
+  border-radius:11px;padding:7px;margin:0 4px;
+}
+.my-bank-lbl{color:var(--gold);font-size:.68rem;margin-bottom:4px;font-weight:600;display:flex;justify-content:space-between}
+.my-bank-stack{display:flex;gap:2px;flex-wrap:wrap;max-height:44px;overflow:hidden}
+
+/* HAND */
+.hand-area{
+  background:rgba(0,0,60,.45);border-top:1.5px solid var(--ab);
+  padding:7px 8px;
+}
+.hl{color:#aaccff;font-size:.68rem;margin-bottom:4px;font-weight:600}
+.hs{display:flex;gap:4px;overflow-x:auto;padding-bottom:3px;-webkit-overflow-scrolling:touch}
+.hs::-webkit-scrollbar{height:3px}
+.hs::-webkit-scrollbar-thumb{background:var(--ab);border-radius:2px}
+
+/* ACTION BAR */
+.abar{
+  display:flex;gap:6px;padding:6px 8px;
+  background:rgba(0,0,0,.6);border-top:1px solid rgba(255,255,255,.08);
+  flex-wrap:wrap;
+}
+.abar .btn{flex:1;padding:9px;font-size:.8rem;min-width:55px}
+
+/* GRAB BANK MODAL */
+#grabModal{
+  position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:700;
+  display:none;align-items:flex-end;justify-content:center;
+}
+#grabModal.open{display:flex}
+.grab-sheet{
+  background:var(--mb);border-radius:16px 16px 0 0;
+  padding:16px;width:100%;max-width:440px;
+  animation:slideUp .22s ease-out;
+}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.grab-sheet h3{color:var(--gold);margin-bottom:12px;font-size:.95rem;text-align:center}
+.grab-bank-item{
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(255,255,255,.06);border-radius:9px;
+  padding:10px 13px;margin-bottom:7px;cursor:pointer;
+  transition:background .15s;
+}
+.grab-bank-item:active{background:rgba(240,192,64,.15)}
+.gbi-left{display:flex;align-items:center;gap:10px}
+.gbi-nm{font-size:.9rem;font-weight:600}
+.gbi-cnt{font-size:.78rem;color:#88aadd}
+
+/* WIN EFFECT */
+#winEffect{
+  position:fixed;inset:0;pointer-events:none;z-index:9000;display:none;
+}
+.confetti{
+  position:absolute;width:10px;height:10px;
+  animation:fall linear forwards;
+}
+@keyframes fall{
+  0%{transform:translateY(-20px) rotate(0);opacity:1}
+  100%{transform:translateY(110vh) rotate(720deg);opacity:0}
+}
+
+/* CHALLENGE FLASH */
+@keyframes chalFlash{
+  0%,100%{background:rgba(0,0,0,0)}
+  50%{background:rgba(255,68,68,.3)}
+}
+.chal-flash{animation:chalFlash .4s ease}
+
+/* WIN BANNER */
+@keyframes winPop{
+  0%{transform:scale(0);opacity:0}
+  60%{transform:scale(1.1);opacity:1}
+  100%{transform:scale(1);opacity:1}
+}
+.win-pop{animation:winPop .4s cubic-bezier(.17,.67,.83,.67)}
+
+/* TOASTS */
+#toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:rgba(10,20,50,.97);border:1.5px solid var(--gold);color:var(--gold);padding:8px 16px;border-radius:18px;font-size:.85rem;z-index:9999;display:none;text-align:center;max-width:88%;pointer-events:none}
+#dnotif{position:fixed;top:54px;left:50%;transform:translateX(-50%);background:rgba(0,70,0,.95);border:1.5px solid var(--green);color:var(--green);padding:6px 14px;border-radius:18px;font-size:.78rem;z-index:9998;display:none;text-align:center;pointer-events:none}
+#chalnotif{position:fixed;top:100px;left:50%;transform:translateX(-50%);background:rgba(60,0,0,.95);border:1.5px solid var(--red);color:#ff8888;padding:8px 18px;border-radius:18px;font-size:.85rem;z-index:9997;display:none;text-align:center;pointer-events:none;font-weight:700}
+
+/* CLAIM POPUP */
+#claimPop{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--mb);border:2px solid var(--gold);border-radius:var(--r);padding:16px;z-index:500;width:86%;max-width:300px;display:none;text-align:center}
+#claimPop h3{color:var(--gold);margin-bottom:8px;font-size:.92rem}
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:400;display:none}
+.ctimer{font-size:2rem;font-weight:900;color:var(--red);animation:pu .5s infinite alternate}
+@keyframes pu{from{opacity:1}to{opacity:.3}}
+
+/* MISC */
+.stitle{color:var(--gold);font-size:.8rem;font-weight:700;margin-bottom:9px;border-bottom:1px solid var(--ab);padding-bottom:5px}
+.ehint{color:#446;text-align:center;padding:20px 0;font-size:.85rem}
+.ibox{background:var(--mb);border-radius:8px;padding:8px 11px;color:#88aadd;font-size:.76rem;margin-bottom:9px}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid #446;border-top-color:var(--gold);border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle}
+@keyframes sp{to{transform:rotate(360deg)}}
+.srv-list{flex:1;overflow-y:auto;margin:8px 0}
+.team-banner{border-radius:8px;padding:5px 10px;font-size:.72rem;text-align:center;font-weight:600}
+
+/* SCORE */
+.sc-card{background:var(--mb);border-radius:var(--r);padding:13px;margin-bottom:9px;border:1.5px solid var(--ab)}
+.sc-rank{font-size:1.7rem;text-align:center;margin-bottom:2px}
+.gm{color:#ffd700}.sm{color:#c0c0c0}.bm{color:#cd7f32}
+.sc-nm{font-size:.95rem;font-weight:700;text-align:center}
+.sc-pts{font-size:1.5rem;font-weight:900;color:var(--gold);text-align:center}
+.sc-bd{display:flex;justify-content:space-around;margin-top:6px;font-size:.75rem;color:#88aadd}
+
+/* GUIDE */
+.guide-sec{background:var(--mb);border-radius:10px;padding:11px;margin-bottom:9px;border-right:3px solid var(--gold)}
+.guide-sec h3{color:var(--gold);font-size:.88rem;margin-bottom:5px}
+.guide-sec p,.guide-sec li{color:#aaccff;font-size:.78rem;line-height:1.6;margin-bottom:3px}
+.guide-sec ul{padding-right:14px}
+
+/* WIN ARCHIVE */
+.win-item{background:var(--mb);border-radius:9px;padding:9px 11px;margin-bottom:7px;border-left:3px solid var(--gold)}
+.win-date{font-size:.7rem;color:#88aadd}
+.win-pts{font-size:1.1rem;font-weight:700;color:var(--gold)}
+.win-rank{font-size:.8rem;color:#88ccff}
+
+/* MENU */
+.menu-btn{position:fixed;top:10px;right:10px;background:var(--mb);border:1.5px solid var(--ab);color:var(--gold);border-radius:8px;padding:6px 11px;font-size:1rem;cursor:pointer;z-index:300;display:none}
+#menuOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:600}
+.menu-sheet{background:var(--mb);width:76%;max-width:270px;height:100%;padding:18px;display:flex;flex-direction:column;gap:9px}
+
+/* Settings toggle */
+.toggle-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0}
+.toggle{width:42px;height:24px;background:var(--ab);border-radius:12px;cursor:pointer;position:relative;transition:background .2s}
+.toggle.on{background:var(--green)}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:left .2s}
+.toggle.on::after{left:21px}
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+<div id="dnotif"></div>
+<div id="chalnotif"></div>
+<div id="overlay"></div>
+<div id="winEffect"></div>
+<button class="menu-btn" id="menuBtn" onclick="openMenu()">☰</button>
+
+<!-- CLAIM POPUP -->
+<div id="claimPop">
+  <h3 id="cTitle">طلب ورقة!</h3>
+  <p id="cInfo" style="color:#aaccff;font-size:.82rem;margin-bottom:9px"></p>
+  <div id="cTimer" class="ctimer">3</div>
+  <div style="display:flex;gap:7px;margin-top:12px">
+    <button class="btn btn-gold" onclick="doChal()">عارض! 🤜</button>
+    <button class="btn btn-outline" onclick="skipChal()">تجاهل</button>
+  </div>
+</div>
+
+<!-- GRAB BANK MODAL -->
+<div id="grabModal">
+  <div class="grab-sheet">
+    <h3>🏦 اختر بنكاً للسحب منه</h3>
+    <div id="grabList"></div>
+    <button class="btn btn-outline" onclick="closeGrabModal()" style="margin-top:6px">إلغاء</button>
+  </div>
+</div>
+
+<!-- MENU -->
+<div id="menuOverlay">
+  <div class="menu-sheet">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <div class="av-sm" id="menuAv">🎴</div>
+      <div id="menuNm" style="font-weight:700"></div>
+    </div>
+    <button class="btn btn-outline" onclick="closeMenu();showS('settSc')">⚙️ الملف الشخصي</button>
+    <button class="btn btn-outline" onclick="closeMenu();showS('srvSc')">🏠 الرئيسية</button>
+    <div style="flex:1"></div>
+    <button class="btn btn-red" onclick="doLogout()">🚪 خروج</button>
+    <button class="btn btn-outline" onclick="closeMenu()">✕ إغلاق</button>
+  </div>
+</div>
+
+<!-- ══ REGISTER ══ -->
+<div id="regSc" class="sc active">
+  <div class="logo"><h1>مجابيد</h1><p>لعبة الورق الخليجية</p></div>
+  <div class="av-sec">
+    <div class="av-prev" id="avPrev" onclick="pickAv()">🎴</div>
+    <div style="color:#88aadd;font-size:.78rem">اضغط لاختيار صورتك 📷</div>
+    <input type="file" id="avIn" accept="image/*" style="display:none" onchange="onAv(event)">
+  </div>
+  <div class="fg"><label>اسمك في اللعبة</label><input type="text" id="rName" placeholder="أدخل اسمك..." maxlength="20"></div>
+  <button class="btn btn-gold" onclick="doReg()">إنشاء حساب ←</button>
+</div>
+
+<!-- ══ SERVERS ══ -->
+<div id="srvSc" class="sc">
+  <div class="logo" style="padding:12px 0 8px"><h1 style="font-size:1.8rem">مجابيد</h1></div>
+  <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px;background:var(--mb);padding:8px 11px;border-radius:10px">
+    <div class="av-sm" id="myAvSm">🎴</div>
+    <div><div id="myNm" style="font-weight:700"></div><div style="color:#88aadd;font-size:.7rem">مرحباً!</div></div>
+    <button class="btn btn-sm btn-outline" style="margin-right:auto;margin-top:0" onclick="showS('settSc')">⚙️</button>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('avail')">🌐 الخوادم</button>
+    <button class="tab" onclick="switchTab('create')">➕ إنشاء</button>
+  </div>
+  <div id="tabAvail" style="display:flex;flex-direction:column;flex:1">
+    <div class="srv-list" id="srvList"><div class="ehint">لا توجد خوادم...</div></div>
+    <button class="btn btn-outline" onclick="refSrv()">🔄 تحديث</button>
+  </div>
+  <div id="tabCreate" style="display:none">
+    <div class="fg"><label>اسم الخادم</label><input type="text" id="sName" placeholder="غرفة الأبطال" maxlength="30"></div>
+    <div class="fg"><label>كلمة مرور (اختياري)</label><input type="password" id="sPass" placeholder="اتركها فارغة للعام"></div>
+    <div class="fg"><label>عدد اللاعبين</label>
+      <select id="sMax"><option value="2">2</option><option value="3">3</option><option value="4" selected>4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option></select></div>
+    <div class="fg"><label>وضع اللعب</label>
+      <select id="sMode"><option value="auto">🤖 تلقائي</option><option value="solo">⚔️ فردي</option><option value="2v2">2 ضد 2</option><option value="3v3">3 ضد 3</option><option value="4v4">4 ضد 4</option></select></div>
+    <button class="btn btn-gold" onclick="crSrv()">إنشاء الخادم ✨</button>
+  </div>
+</div>
+
+<!-- ══ LOBBY ══ -->
+<div id="lobSc" class="sc">
+  <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">
+    <button onclick="leaveLob()" style="background:none;border:none;color:#aaccff;font-size:1.3rem;cursor:pointer">←</button>
+    <h2 id="lobNm" style="font-size:1rem;color:var(--gold)"></h2>
+  </div>
+  <div class="ibox">📋 رمز: <strong id="lobCode" style="color:var(--gold);letter-spacing:3px;font-size:1rem"></strong></div>
+  <div class="stitle">👥 اللاعبون (<span id="plCnt">0</span>/<span id="plMax">8</span>)</div>
+  <div id="plList"></div>
+  <div id="specList"></div>
+  <div id="hostCtrl" style="display:none;margin-top:14px">
+    <button class="btn btn-gold" onclick="startG()">🎮 بدء اللعبة!</button>
+    <p style="color:#88aadd;font-size:.74rem;margin-top:5px;text-align:center">لاعبان على الأقل</p>
+  </div>
+  <div id="waitMsg" style="display:none;text-align:center;padding:18px 0;color:#88aadd">انتظار... <span class="spin"></span></div>
+</div>
+
+<!-- JOIN PASS -->
+<div id="joinSc" class="sc">
+  <div style="display:flex;align-items:center;gap:9px;margin-bottom:18px">
+    <button onclick="showS('srvSc')" style="background:none;border:none;color:#aaccff;font-size:1.3rem;cursor:pointer">←</button>
+    <h2 id="joinNm" style="color:var(--gold);font-size:1rem"></h2>
+  </div>
+  <div class="fg" id="joinPasSec"><label>كلمة المرور</label><input type="password" id="joinPas" placeholder="أدخل كلمة المرور..."></div>
+  <div style="margin-bottom:9px"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="joinSpec" style="width:auto"> انضمام كمتفرج 👁</label></div>
+  <button class="btn btn-gold" onclick="confJoin()">دخول →</button>
+  <button class="btn btn-outline" onclick="showS('srvSc')">إلغاء</button>
+</div>
+
+<!-- ══ GAME ══ -->
+<div id="gameSc" class="sc">
+  <div class="game-wrap">
+    <!-- TOP BAR -->
+    <div class="g-top">
+      <div class="ti" id="turnLbl">دور: ...</div>
+      <div id="teamBanner" class="team-banner" style="display:none"></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="timer" id="gameTimer">⏱ 00:00</span>
+        <span style="color:#88ff88;font-size:.72rem" id="drawCnt">📦 0</span>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="g-table" id="gTable">
+      <!-- TOP opponents -->
+      <div class="opp-top" id="oppTop"></div>
+
+      <!-- LEFT -->
+      <div class="opp-left" id="oppLeft"></div>
+      <!-- RIGHT -->
+      <div class="opp-right" id="oppRight"></div>
+
+      <!-- CENTER -->
+      <div class="g-center">
+        <!-- Field -->
+        <div class="field-wrap-list">
+          <div class="field-lbl">🃏 الميدان</div>
+          <div class="field-row" id="fldRow"></div>
+        </div>
+        <!-- Draw pile -->
+        <div style="text-align:center;margin-top:5px">
+          <div class="draw-back" id="drawPile" onclick="doDrawPile()">🂠</div>
+          <div class="draw-count-lbl" id="drawCntLbl">0 ورقة</div>
+        </div>
+        <!-- All banks -->
+        <div class="banks-row" id="allBanks"></div>
+      </div>
+
+      <!-- BOTTOM opponents (shouldn't exist usually since I'm at bottom) -->
+      <div class="opp-bottom" id="oppBottom"></div>
+    </div>
+
+    <!-- MY BANK -->
+    <div class="my-bank-full">
+      <div class="my-bank-lbl">
+        <span>🏦 بنكي: <span id="myBkCnt">0</span></span>
+        <span id="myBkPts" style="color:#ffcc44">0 نقطة</span>
+      </div>
+      <div class="my-bank-stack" id="myBkStack"></div>
+    </div>
+
+    <!-- MY HAND -->
+    <div class="hand-area">
+      <div class="hl">🤚 يدي: <span id="myHdCnt">0</span></div>
+      <div class="hs" id="myHd"></div>
+    </div>
+
+    <!-- ACTION BAR -->
+    <div class="abar">
+      <button class="btn btn-gold" id="claimBtn" onclick="doClaim()" disabled>هات! 👊</button>
+      <button class="btn btn-outline" id="meydanaBtn" onclick="doMeydana()" disabled>ميدنة 🃏</button>
+      <button class="btn btn-outline btn-sm" id="grabBankBtn" onclick="openGrabModal()" disabled>هات بنك 🏦</button>
+      <button class="btn btn-outline btn-sm" id="endTurnBtn" onclick="doEndTurn()" style="display:none">إنهِ ↩</button>
+      <button class="btn btn-outline btn-sm" onclick="cancelSel()" style="color:var(--red)">✕</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCORES ══ -->
+<div id="scoreSc" class="sc">
+  <div class="logo" style="padding:16px 0 8px"><h1 style="font-size:1.7rem">النتائج 🏆</h1></div>
+  <div id="gameDur" style="text-align:center;color:#88aadd;font-size:.78rem;margin-bottom:9px"></div>
+  <div id="teamScoreBox" style="margin-bottom:9px"></div>
+  <div id="scoreList" style="flex:1;overflow-y:auto"></div>
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <button class="btn btn-gold" onclick="playAgn()">إعادة 🔄</button>
+    <button class="btn btn-outline" onclick="exitG()">خروج 🚪</button>
+  </div>
+</div>
+
+<!-- ══ SETTINGS / PROFILE ══ -->
+<div id="settSc" class="sc">
+  <div style="display:flex;align-items:center;gap:9px;margin-bottom:14px">
+    <button onclick="showS('srvSc')" style="background:none;border:none;color:#aaccff;font-size:1.3rem;cursor:pointer">←</button>
+    <h2 style="color:var(--gold)">⚙️ الملف الشخصي</h2>
+  </div>
+  <div style="flex:1;overflow-y:auto">
+    <!-- Profile -->
+    <div class="stitle">الحساب</div>
+    <div style="text-align:center;margin-bottom:12px">
+      <div class="av-prev" id="settAv" onclick="pickSettAv()" style="margin:0 auto 6px">🎴</div>
+      <input type="file" id="settAvIn" accept="image/*" style="display:none" onchange="onSettAv(event)">
+    </div>
+    <div class="fg"><label>الاسم</label><input type="text" id="settName" maxlength="20"></div>
+    <button class="btn btn-gold" onclick="saveSettings()">💾 حفظ</button>
+
+    <!-- Theme -->
+    <div class="stitle" style="margin-top:14px">الثيم</div>
+    <div style="display:flex;gap:7px;margin-bottom:12px">
+      <button class="btn btn-sm btn-outline" onclick="setTheme('dark')">🌙 داكن</button>
+      <button class="btn btn-sm btn-outline" onclick="setTheme('blue')">💙 أزرق</button>
+      <button class="btn btn-sm btn-outline" onclick="setTheme('green')">💚 أخضر</button>
+    </div>
+
+    <!-- GUIDE inside settings -->
+    <div class="stitle" style="margin-top:6px">📖 دليل اللعبة</div>
+    <div class="guide-sec"><h3>🎯 الهدف</h3><p>اجمع أكبر عدد من النقاط عبر أخذ الأوراق ذات القيمة من الميدان والبنوك.</p></div>
+    <div class="guide-sec"><h3>👊 هات</h3><ul><li>اختر ورقة من يدك</li><li>اختر ورقة من الميدان بنفس الرقم</li><li>اضغط هات — ينتقلان لبنكك</li><li>تستمر في دورك للأكل أكثر</li></ul></div>
+    <div class="guide-sec"><h3>⚡ المعارضة</h3><p>إذا طلب لاعب ورقة وعندك نفس الرقم، عارضه خلال 3 ثوانٍ. الطالب يفوز بكل الأوراق. المعارضة الأولى تُعتمد فقط.</p></div>
+    <div class="guide-sec"><h3>🃏 ميدنة</h3><p>ضع ورقة من يدك في الميدان وانتقل الدور. استخدمها إذا ما عندك تطابق.</p></div>
+    <div class="guide-sec"><h3>🏦 هات بنك</h3><p>اسحب أعلى ورقة من بنك خصمك وضعها في يدك. تظهر الورقة العلوية فقط.</p></div>
+    <div class="guide-sec"><h3>🃏 الجوكر</h3><ul><li>يطابق أي رقم</li><li>يأخذ أي ورقة من الميدان</li><li>50 نقطة في البنك</li></ul></div>
+    <div class="guide-sec"><h3>📊 النقاط</h3><p>10، J، Q، K، A = 10 نقطة. الجوكر = 50 نقطة. الباقي = 0.</p></div>
+
+    <!-- WIN ARCHIVE -->
+    <div class="stitle" style="margin-top:14px">🏆 أرشيف الفوز</div>
+    <div id="winArchive"><div class="ehint">لا يوجد سجل بعد...</div></div>
+
+    <!-- Logout -->
+    <div class="stitle" style="margin-top:14px">الحساب</div>
+    <button class="btn btn-red" onclick="doLogout()">🚪 تسجيل خروج</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════
+let uid=localStorage.getItem('mj_uid');
+let udata=JSON.parse(localStorage.getItem('mj_u')||'null');
+let selSrvId=null,curSrvId=null,isHost=false;
+let plAv={},plNm={};
+
+// Game
+let myHand=[],fldCards=[],myBank=[];
+let selHand=null,selFld=null;
+let curTurn=null,myPid=null;
+let players=[],hCount={};
+let myTeamId=null,teamsData={},tNames={},tColors={};
+let chalCard=null,chalTO=null;
+let gameStartTime=null,timerInt=null;
+let eatenThisTurn=false;
+let oppBanksData={};  // {pid: {count, top}}
+let numPlayers=2;
+let settAvData='';
+
+const socket=io();
+
+// ═══════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════
+function showS(id){
+  document.querySelectorAll('.sc').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  document.getElementById('menuBtn').style.display=id==='gameSc'?'block':'none';
+  if(id==='settSc') loadWinArchive();
+}
+function toast(msg,dur=2800){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.style.display='block';
+  clearTimeout(t._to);t._to=setTimeout(()=>t.style.display='none',dur);
+}
+function dnotif(msg){
+  const d=document.getElementById('dnotif');
+  d.textContent=msg;d.style.display='block';
+  clearTimeout(d._to);d._to=setTimeout(()=>d.style.display='none',2000);
+}
+function chalNotif(msg){
+  const d=document.getElementById('chalnotif');
+  d.textContent=msg;d.style.display='block';
+  document.getElementById('gameSc').classList.add('chal-flash');
+  setTimeout(()=>document.getElementById('gameSc').classList.remove('chal-flash'),400);
+  clearTimeout(d._to);d._to=setTimeout(()=>d.style.display='none',2500);
+}
+function eh(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function pts(r){return {'10':10,'J':10,'Q':10,'K':10,'A':10,'JOKER':50}[r]||0;}
+
+function switchTab(t){
+  document.getElementById('tabAvail').style.display=t==='avail'?'flex':'none';
+  document.getElementById('tabCreate').style.display=t==='create'?'block':'none';
+  document.querySelectorAll('.tabs .tab').forEach((b,i)=>{
+    b.classList.toggle('active',(i===0&&t==='avail')||(i===1&&t==='create'));
+  });
+}
+
+function openMenu(){
+  document.getElementById('menuAv').innerHTML=udata?.avatar?`<img src="${udata.avatar}">`:'🎴';
+  document.getElementById('menuNm').textContent=udata?.name||'';
+  document.getElementById('menuOverlay').style.display='flex';
+}
+function closeMenu(){document.getElementById('menuOverlay').style.display='none';}
+
+// ═══════════════════════════════════════
+//  TIMER
+// ═══════════════════════════════════════
+function startTimer(){
+  gameStartTime=Date.now();clearInterval(timerInt);
+  timerInt=setInterval(()=>{
+    const s=Math.floor((Date.now()-gameStartTime)/1000);
+    const m=String(Math.floor(s/60)).padStart(2,'0');
+    const sc2=String(s%60).padStart(2,'0');
+    document.getElementById('gameTimer').textContent=`⏱ ${m}:${sc2}`;
+  },1000);
+}
+function stopTimer(){
+  clearInterval(timerInt);
+  if(!gameStartTime) return '00:00';
+  const s=Math.floor((Date.now()-gameStartTime)/1000);
+  return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+}
+
+// ═══════════════════════════════════════
+//  CONFETTI
+// ═══════════════════════════════════════
+function showConfetti(){
+  const el=document.getElementById('winEffect');
+  el.style.display='block'; el.innerHTML='';
+  const colors=['#f0c040','#ff6644','#44cc88','#4488ff','#ff88ff'];
+  for(let i=0;i<60;i++){
+    const d=document.createElement('div');
+    d.className='confetti';
+    d.style.cssText=`
+      left:${Math.random()*100}%;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;
+      border-radius:${Math.random()>.5?'50%':'2px'};
+      animation-duration:${1+Math.random()*2}s;
+      animation-delay:${Math.random()*.5}s;
+    `;
+    el.appendChild(d);
+  }
+  setTimeout(()=>{el.style.display='none';el.innerHTML='';},3000);
+}
+
+// ═══════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{
+  const th=localStorage.getItem('mj_theme');
+  if(th) setTheme(th);
+  if(uid&&udata){
+    applyUserUI();
+    socket.emit('join_personal_room',{user_id:uid});
+    showS('srvSc'); loadSrvs();
+  }
+});
+
+function applyUserUI(){
+  document.getElementById('myNm').textContent=udata.name;
+  if(udata.avatar) document.getElementById('myAvSm').innerHTML=`<img src="${udata.avatar}">`;
+  document.getElementById('settName').value=udata.name||'';
+  if(udata.avatar) document.getElementById('settAv').innerHTML=`<img src="${udata.avatar}">`;
+}
+
+// ═══════════════════════════════════════
+//  REGISTER
+// ═══════════════════════════════════════
+let avData='';
+function pickAv(){document.getElementById('avIn').click();}
+function onAv(e){compress(e.target.files[0],d=>{avData=d;document.getElementById('avPrev').innerHTML=`<img src="${d}">`});}
+function compress(file,cb){
+  if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    const img=new Image();
+    img.onload=()=>{
+      const c=document.createElement('canvas');
+      const max=200;let w=img.width,h=img.height;
+      if(w>h){if(w>max){h*=max/w;w=max;}}else{if(h>max){w*=max/h;h=max;}}
+      c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      cb(c.toDataURL('image/jpeg',.7));
+    };
+    img.src=ev.target.result;
+  };
+  r.readAsDataURL(file);
+}
+async function doReg(){
+  const name=document.getElementById('rName').value.trim();
+  if(!name){toast('❌ أدخل اسمك');return;}
+  const r=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,avatar:avData})});
+  const d=await r.json();
+  if(d.user_id){
+    uid=d.user_id;udata={name,avatar:avData};
+    localStorage.setItem('mj_uid',uid);localStorage.setItem('mj_u',JSON.stringify(udata));
+    applyUserUI();
+    socket.emit('join_personal_room',{user_id:uid});
+    showS('srvSc');loadSrvs();
+  }
+}
+
+// ═══════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════
+function pickSettAv(){document.getElementById('settAvIn').click();}
+function onSettAv(e){compress(e.target.files[0],d=>{settAvData=d;document.getElementById('settAv').innerHTML=`<img src="${d}">`});}
+async function saveSettings(){
+  const name=document.getElementById('settName').value.trim();
+  if(!name){toast('❌ الاسم لا يمكن أن يكون فارغاً');return;}
+  const body={name};if(settAvData)body.avatar=settAvData;
+  const r=await fetch(`/api/user/${uid}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const d=await r.json();
+  if(d.ok){
+    udata={name:d.user.name,avatar:d.user.avatar||udata.avatar};
+    localStorage.setItem('mj_u',JSON.stringify(udata));
+    settAvData='';applyUserUI();toast('✅ تم الحفظ');
+  }
+}
+function setTheme(t){
+  const th={dark:{'--db':'#0a0e1a','--mb':'#0d1530'},blue:{'--db':'#070d1f','--mb':'#0a1535'},green:{'--db':'#071209','--mb':'#0a1e0d'}};
+  Object.entries(th[t]||th.dark).forEach(([k,v])=>document.documentElement.style.setProperty(k,v));
+  localStorage.setItem('mj_theme',t);toast('🎨 ثيم مطبّق');
+}
+function doLogout(){localStorage.removeItem('mj_uid');localStorage.removeItem('mj_u');uid=null;udata=null;avData='';closeMenu();showS('regSc');}
+
+// ═══════════════════════════════════════
+//  WIN ARCHIVE
+// ═══════════════════════════════════════
+async function loadWinArchive(){
+  if(!uid){return;}
+  const r=await fetch(`/api/user/${uid}/wins`);
+  const d=await r.json();
+  const el=document.getElementById('winArchive');
+  if(!d.wins||!d.wins.length){el.innerHTML='<div class="ehint">لا يوجد سجل بعد...</div>';return;}
+  el.innerHTML=d.wins.map(w=>`
+    <div class="win-item">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div class="win-pts">${w.points} نقطة</div>
+          <div class="win-rank">المركز ${w.rank===1?'🥇':w.rank===2?'🥈':'🥉'}</div>
+        </div>
+        <div style="text-align:left">
+          <div class="win-date">${w.date} ${w.time}</div>
+          <div style="color:#88aadd;font-size:.7rem">${w.players} لاعبين | ${w.mode||'auto'}</div>
+          <div style="color:#446;font-size:.65rem">${w.match_id}</div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════
+//  SERVERS
+// ═══════════════════════════════════════
+async function loadSrvs(){
+  try{
+    const r=await fetch('/api/servers');
+    const list=await r.json();
+    const el=document.getElementById('srvList');
+    if(!list.length){el.innerHTML='<div class="ehint">لا توجد خوادم... كن الأول! 🎮</div>';return;}
+    el.innerHTML=list.map(s=>`
+      <div class="srv-card" onclick="selSrv('${s.id}','${eh(s.name)}',${s.has_password},'${s.status}')">
+        <div>
+          <div style="font-weight:700">${eh(s.name)}</div>
+          <div style="color:#88aadd;font-size:.75rem;margin-top:2px">👥 ${s.players}/${s.max_players} | ${s.mode} ${s.has_password?'🔒':'🔓'}</div>
+        </div>
+        <span class="badge ${s.status==='waiting'?'bw':'bp'}">${s.status==='waiting'?'انتظار':'جاري'}</span>
+      </div>`).join('');
+  }catch(e){}
+}
+function refSrv(){loadSrvs();toast('🔄 تم التحديث',1200);}
+
+async function ensureUser(){
+  const c=await fetch(`/api/user/${uid}`);
+  if(!c.ok){
+    const r=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:udata.name,avatar:udata.avatar||''})});
+    const d=await r.json();
+    if(d.user_id){uid=d.user_id;localStorage.setItem('mj_uid',uid);}
+  }
+}
+
+async function crSrv(){
+  if(!uid||!udata){toast('❌ يجب تسجيل الدخول');return;}
+  await ensureUser();
+  const name=document.getElementById('sName').value.trim();
+  const pass=document.getElementById('sPass').value;
+  const maxP=document.getElementById('sMax').value;
+  const mode=document.getElementById('sMode').value;
+  if(!name){toast('❌ أدخل اسم الخادم');return;}
+  const r=await fetch('/api/servers/create',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name,password:pass,user_id:uid,max_players:parseInt(maxP),mode})});
+  const d=await r.json();
+  if(d.error){toast('❌ '+d.error);return;}
+  if(d.server_id){selSrvId=d.server_id;isHost=true;enterLob(d.server_id,name);}
+}
+
+function selSrv(id,name,hasP,status){
+  selSrvId=id;
+  document.getElementById('joinNm').textContent=name;
+  document.getElementById('joinPasSec').style.display=hasP?'block':'none';
+  document.getElementById('joinPas').value='';
+  if(!hasP){confJoin();return;}
+  showS('joinSc');
+}
+
+async function confJoin(){
+  if(!uid||!udata){toast('❌ يجب تسجيل الدخول');return;}
+  await ensureUser();
+  const pass=document.getElementById('joinPas')?document.getElementById('joinPas').value:'';
+  const spec=document.getElementById('joinSpec')?.checked||false;
+  const r=await fetch('/api/servers/join',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({server_id:selSrvId,password:pass,user_id:uid,spectator:spec})});
+  const d=await r.json();
+  if(d.success){isHost=false;enterLob(selSrvId,document.getElementById('joinNm').textContent);}
+  else toast('❌ '+(d.error||'خطأ'));
+}
+
+// ═══════════════════════════════════════
+//  LOBBY
+// ═══════════════════════════════════════
+function enterLob(sid,sname){
+  curSrvId=sid;
+  document.getElementById('lobNm').textContent=sname;
+  document.getElementById('lobCode').textContent=sid;
+  document.getElementById('hostCtrl').style.display=isHost?'block':'none';
+  document.getElementById('waitMsg').style.display=isHost?'none':'block';
+  showS('lobSc');
+  socket.emit('join_server_room',{server_id:sid,user_id:uid});
+}
+function leaveLob(){
+  if(curSrvId) socket.emit('leave_server',{server_id:curSrvId,user_id:uid});
+  curSrvId=null;showS('srvSc');loadSrvs();
+}
+function kickPl(tid){socket.emit('kick_player',{server_id:curSrvId,host_id:uid,target_id:tid});}
+function startG(){socket.emit('start_game',{server_id:curSrvId,host_id:uid});}
+
+socket.on('players_update',data=>{
+  const ps=data.players,hid=data.host_id,specs=data.spectators||[];
+  document.getElementById('plCnt').textContent=ps.length;
+  document.getElementById('plList').innerHTML=ps.map(p=>`
+    <div class="pr">
+      <div class="av-sm">${p.avatar?`<img src="${p.avatar}">`:'🎴'}</div>
+      <div style="flex:1"><span>${eh(p.name)}</span>${p.id===hid?'<span class="hb">مضيف</span>':''}</div>
+      ${isHost&&p.id!==uid?`<button class="btn btn-red btn-xs" onclick="kickPl('${p.id}')">طرد</button>`:''}
+    </div>`).join('');
+  if(specs.length) document.getElementById('specList').innerHTML=`<div style="color:#88aadd;font-size:.72rem;margin-bottom:4px">👁 ${specs.map(s=>eh(s.name)).join('، ')}</div>`;
+});
+socket.on('kicked',d=>{if(d.user_id===uid){toast('❌ تم طردك');showS('srvSc');loadSrvs();}});
+
+// ═══════════════════════════════════════
+//  GAME START
+// ═══════════════════════════════════════
+socket.on('game_started',data=>{
+  myHand=data.your_hand;fldCards=data.field;myBank=[];
+  selHand=null;selFld=null;eatenThisTurn=false;
+  curTurn=data.current_turn;myPid=data.your_id;
+  players=data.players;plNm=data.player_names;plAv=data.player_avatars||{};
+  teamsData=data.teams||{};tNames=data.tnames||{};tColors=data.tcolors||{};
+  myTeamId=teamsData[myPid]||null;
+  numPlayers=data.num_players||players.length;
+  hCount={};players.forEach(p=>hCount[p]=7);
+  oppBanksData={};players.forEach(p=>oppBanksData[p]={count:0,top:null});
+
+  document.getElementById('drawCnt').textContent='📦 '+data.draw_count;
+  document.getElementById('drawCntLbl').textContent=data.draw_count+' ورقة';
+
+  // Team banner
+  const tb=document.getElementById('teamBanner');
+  if(myTeamId&&!myTeamId.startsWith('solo')){
+    const partner=players.find(p=>p!==myPid&&teamsData[p]===myTeamId);
+    const col=myTeamId==='A'?'var(--ta)':'var(--tb)';
+    tb.style.cssText=`display:block;background:${col}22;border:1px solid ${col};color:${col}`;
+    tb.textContent=`🤝 ${tNames[myPid]||'فريقك'} ${partner?'· '+plNm[partner]:''}`;
+  }else tb.style.display='none';
+
+  startTimer();
+  showS('gameSc');
+  renderAll();
+  toast('🎮 بدأت اللعبة!',2000);
+});
+
+// ═══════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════
+function renderAll(){
+  const myTurn=curTurn===myPid;
+  const lbl=document.getElementById('turnLbl');
+  lbl.textContent=myTurn?'🟢 دورك!':`دور: ${plNm[curTurn]||''}`;
+  lbl.className='ti'+(myTurn?' my-turn':'');
+  document.getElementById('claimBtn').disabled=!myTurn;
+  document.getElementById('meydanaBtn').disabled=!myTurn;
+  document.getElementById('grabBankBtn').disabled=!myTurn;
+  document.getElementById('endTurnBtn').style.display=myTurn&&eatenThisTurn?'block':'none';
+  renderOpp();renderFld();renderHand();renderMyBank();renderAllBanks();
+}
+
+function renderOpp(){
+  const opp=players.filter(p=>p!==myPid);
+  const n=numPlayers;
+
+  // Clear all
+  ['oppTop','oppLeft','oppRight','oppBottom'].forEach(id=>document.getElementById(id).innerHTML='');
+
+  if(n===2){
+    // واحد فوق فقط
+    const p=opp[0];
+    if(p) document.getElementById('oppTop').innerHTML=buildOppBox(p);
+  } else if(n===4){
+    // أعلى، يسار، يمين
+    const positions=['oppTop','oppRight','oppLeft'];
+    opp.slice(0,3).forEach((p,i)=>{
+      if(positions[i]) document.getElementById(positions[i]).innerHTML=buildOppBox(p);
+    });
+  } else {
+    // باقي الأعداد - كلهم فوق
+    document.getElementById('oppTop').innerHTML=opp.map(p=>buildOppBox(p)).join('');
+  }
+}
+
+function buildOppBox(p){
+  const isCur=p===curTurn;
+  const tc=teamsData[p];
+  const tcls=tc==='A'?'team-a':tc==='B'?'team-b':'';
+  const av=plAv[p];
+  return `<div class="opp-box ${isCur?'ct':''} ${tcls}">
+    <div class="opp-av">${av?`<img src="${av}">`:'🎴'}</div>
+    <div class="opp-c">${hCount[p]??0}</div>
+    <div class="opp-n">${eh(plNm[p]||'')}</div>
+  </div>`;
+}
+
+function renderFld(){
+  const r=document.getElementById('fldRow');
+  r.innerHTML=fldCards.map(c=>buildCard(c,'f')).join('');
+  r.querySelectorAll('.card').forEach((el,i)=>el.onclick=()=>selFldC(fldCards[i]));
+}
+
+function renderHand(){
+  const r=document.getElementById('myHd');
+  document.getElementById('myHdCnt').textContent=myHand.length;
+  r.innerHTML=myHand.map(c=>buildCard(c,'h')).join('');
+  r.querySelectorAll('.card').forEach((el,i)=>el.onclick=()=>selHandC(myHand[i]));
+}
+
+function renderMyBank(){
+  document.getElementById('myBkCnt').textContent=myBank.length;
+  const tp=myBank.reduce((s,c)=>s+pts(c.rank),0);
+  document.getElementById('myBkPts').textContent=tp+' نقطة';
+  document.getElementById('myBkStack').innerHTML=myBank.slice(-24).map(c=>{
+    if(c.rank==='JOKER') return `<div class="bc j">🃏</div>`;
+    const red=['♥','♦'].includes(c.suit);
+    return `<div class="bc ${red?'r':'b'}"><span>${c.rank}</span><span style="font-size:.38rem">${c.suit}</span></div>`;
+  }).join('');
+}
+
+function renderAllBanks(){
+  // بنوك الخصوم — تظهر أعلى ورقة فقط
+  const el=document.getElementById('allBanks');
+  el.innerHTML=players.filter(p=>p!==myPid).map(p=>{
+    const bdata=oppBanksData[p]||{count:0,top:null};
+    const top=bdata.top;
+    let topHtml='';
+    if(top){
+      if(top.rank==='JOKER') topHtml=`<div class="bc j" style="width:26px;height:38px">🃏</div>`;
+      else{
+        const red=['♥','♦'].includes(top.suit);
+        topHtml=`<div class="bc ${red?'r':'b'}" style="width:26px;height:38px"><span style="font-size:.52rem">${top.rank}</span><span style="font-size:.4rem">${top.suit}</span></div>`;
+      }
+    }
+    return `<div class="bank-box" onclick="void(0)">
+      <div class="bank-nm">${eh(plNm[p]||'')}</div>
+      <div class="bank-cnt">🏦${bdata.count}</div>
+      <div class="bank-top">${topHtml||'<span style="font-size:.6rem;color:#446">فارغ</span>'}</div>
+    </div>`;
+  }).join('');
+}
+
+function buildCard(card,ctx){
+  const sh=ctx==='h'&&selHand?.id===card.id;
+  const sf=ctx==='f'&&selFld?.id===card.id;
+  const sel=sh?'sel':sf?'fsel':'';
+  const p=pts(card.rank);
+  const pl=p>0?`<span class="cpts">${p}</span>`:'';
+  if(card.rank==='JOKER') return `<div class="card jok ${sel}" data-id="${card.id}">${pl}<div class="cr">🃏</div><div class="cs">جوكر</div></div>`;
+  const red=['♥','♦'].includes(card.suit);
+  return `<div class="card ${red?'red':'blk'} ${sel}" data-id="${card.id}">${pl}<div class="cr">${card.rank}</div><div class="cs">${card.suit}</div></div>`;
+}
+
+function selHandC(c){selHand=selHand?.id===c.id?null:c;renderHand();renderFld();}
+function selFldC(c){selFld=selFld?.id===c.id?null:c;renderFld();renderHand();}
+function cancelSel(){selHand=null;selFld=null;renderHand();renderFld();}
+
+// ═══════════════════════════════════════
+//  ACTIONS
+// ═══════════════════════════════════════
+function doClaim(){
+  if(!selHand||!selFld){toast('❗ اختر ورقة من يدك وورقة من الميدان');return;}
+  socket.emit('claim_card',{server_id:curSrvId,user_id:myPid,hand_card:selHand.id,field_card:selFld.id});
+  selHand=null;selFld=null;
+}
+function doMeydana(){
+  if(!selHand){toast('❗ اختر ورقة من يدك للميدنة');return;}
+  socket.emit('meydana',{server_id:curSrvId,user_id:myPid,card_id:selHand.id});
+  selHand=null;
+}
+function doEndTurn(){socket.emit('end_turn',{server_id:curSrvId,user_id:myPid});}
+function doDrawPile(){/* السحب تلقائي */toast('📦 السحب تلقائي في بداية كل دور',1800);}
+
+// GRAB BANK
+function openGrabModal(){
+  socket.emit('request_grab_bank',{server_id:curSrvId,user_id:myPid});
+}
+socket.on('grab_bank_list',data=>{
+  const list=data.banks;
+  if(!list||!list.length){toast('لا يوجد بنوك متاحة');return;}
+  const el=document.getElementById('grabList');
+  el.innerHTML=list.map(b=>{
+    const top=b.top_card;
+    let topHtml='<span style="font-size:.75rem;color:#446">فارغ</span>';
+    if(top){
+      if(top.rank==='JOKER') topHtml=`<div class="bc j" style="width:30px;height:44px;font-size:.7rem">🃏</div>`;
+      else{
+        const red=['♥','♦'].includes(top.suit);
+        topHtml=`<div class="bc ${red?'r':'b'}" style="width:30px;height:44px"><span style="font-size:.65rem">${top.rank}</span><span style="font-size:.5rem">${top.suit}</span></div>`;
+      }
+    }
+    return `<div class="grab-bank-item" onclick="doGrabBank('${b.player_id}')">
+      <div class="gbi-left">
+        <div>${topHtml}</div>
+        <div>
+          <div class="gbi-nm">${eh(b.player_name)}</div>
+          <div class="gbi-cnt">🏦 ${b.count} ورقة</div>
+        </div>
+      </div>
+      <button class="btn btn-gold btn-sm">سحب ↗</button>
+    </div>`;
+  }).join('');
+  document.getElementById('grabModal').classList.add('open');
+});
+function doGrabBank(targetId){
+  closeGrabModal();
+  socket.emit('grab_bank',{server_id:curSrvId,user_id:myPid,target_id:targetId});
+}
+function closeGrabModal(){document.getElementById('grabModal').classList.remove('open');}
+
+// ═══════════════════════════════════════
+//  SOCKET: GAME EVENTS
+// ═══════════════════════════════════════
+socket.on('claim_announced',data=>{
+  const isMe=data.player_id===myPid;
+  // ✅ أي لاعب يعارض أي لاعب — بدون قيود الفريق
+  const match=myHand.find(c=>c.rank===data.hand_card.rank||c.rank==='JOKER');
+  if(!isMe&&match){
+    showChalPop(data,match);
+  }else if(isMe){
+    toast('⏳ انتظر...');
+    setTimeout(()=>socket.emit('resolve_claim',{server_id:curSrvId,user_id:myPid}),3600);
+  }else{
+    toast(`${data.player_name} طلب ${data.field_card.rank}${data.field_card.suit}`);
+  }
+});
+
+function showChalPop(cd,mc){
+  chalCard=mc;
+  document.getElementById('cTitle').textContent=`${cd.player_name} طلب ${cd.field_card.rank}${cd.field_card.suit}!`;
+  document.getElementById('cInfo').textContent=`عندك ${mc.rank}${mc.suit} — عارضه؟`;
+  let s=3;document.getElementById('cTimer').textContent=s;
+  document.getElementById('overlay').style.display='block';
+  document.getElementById('claimPop').style.display='block';
+  clearInterval(chalTO);
+  chalTO=setInterval(()=>{s--;document.getElementById('cTimer').textContent=s;if(s<=0){clearInterval(chalTO);skipChal();}},1000);
+}
+function doChal(){
+  clearInterval(chalTO);closeChalPop();
+  if(!chalCard)return;
+  socket.emit('challenge_claim',{server_id:curSrvId,user_id:myPid,card:chalCard.id});
+  chalNotif('🤜 عارضت!');
+}
+function skipChal(){clearInterval(chalTO);closeChalPop();}
+function closeChalPop(){document.getElementById('overlay').style.display='none';document.getElementById('claimPop').style.display='none';chalCard=null;}
+
+socket.on('challenge_announced',d=>{
+  chalNotif(`⚡ ${d.player_name} عارض!`);
+});
+
+socket.on('claim_resolved',data=>{
+  fldCards=data.field;hCount=data.hands_count;
+  document.getElementById('drawCnt').textContent='📦 '+data.draw_count;
+  document.getElementById('drawCntLbl').textContent=data.draw_count+' ورقة';
+
+  if(data.winner===myPid){
+    if(data.won_cards) myBank.push(...data.won_cards);
+    eatenThisTurn=true;
+    const tp=myBank.reduce((s,c)=>s+pts(c.rank),0);
+    toast(`🏆 أخذت ${data.won_cards?.length||0} ورقة! (${tp} نقطة)`);
+  }else{
+    // تحديث بنك الفائز
+    if(data.won_cards){
+      oppBanksData[data.winner]=oppBanksData[data.winner]||{count:0,top:null};
+      oppBanksData[data.winner].count+=(data.won_cards.length);
+    }
+    toast(`${data.winner_name} أخذ الأوراق`);
+  }
+  renderAll();
+});
+
+socket.on('banks_top_update',data=>{
+  Object.entries(data.tops).forEach(([pid,top])=>{
+    if(!oppBanksData[pid]) oppBanksData[pid]={count:0,top:null};
+    oppBanksData[pid].top=top;
+    oppBanksData[pid].count=data.counts[pid]||0;
+  });
+  // بنكي الخاص لا يتأثر بهذا
+  renderAllBanks();
+});
+
+socket.on('your_hand',data=>{
+  myHand=data.hand;
+  if(data.drawn&&data.drawn.length>0&&curTurn===myPid){
+    dnotif(`📥 سُحب لك ${data.drawn.length} ورقة!`);
+    // أنيميشن للأوراق الجديدة
+    setTimeout(()=>{
+      const cards=document.getElementById('myHd').querySelectorAll('.card');
+      const start=Math.max(0,cards.length-data.drawn.length);
+      for(let i=start;i<cards.length;i++) cards[i].classList.add('card-fly');
+    },50);
+  }
+  renderHand();
+});
+
+socket.on('meydana_done',data=>{
+  fldCards=data.field;hCount=data.hands_count;curTurn=data.next_turn;eatenThisTurn=false;
+  document.getElementById('drawCnt').textContent='📦 '+data.draw_count;
+  document.getElementById('drawCntLbl').textContent=data.draw_count+' ورقة';
+  toast(`${data.player_name} ميدّن ${data.card.rank}${data.card.suit}`);
+  renderAll();
+});
+
+socket.on('turn_changed',data=>{
+  curTurn=data.next_turn;hCount=data.hands_count;eatenThisTurn=false;
+  document.getElementById('drawCnt').textContent='📦 '+data.draw_count;
+  document.getElementById('drawCntLbl').textContent=data.draw_count+' ورقة';
+  renderAll();
+});
+
+socket.on('bank_grabbed',data=>{
+  if(data.grabber_id===myPid){
+    myHand.push(data.card);renderHand();
+    toast(`🤜 أخذت ورقة من بنك ${data.target_name}!`);
+  }
+  // تحديث بنوك
+  if(!oppBanksData[data.target_id]) oppBanksData[data.target_id]={count:0,top:null};
+  oppBanksData[data.target_id].count=data.banks_count[data.target_id]||0;
+  renderAllBanks();
+});
+
+socket.on('cards_buried',data=>{fldCards=data.field;renderFld();toast('🪦 تم الدفن!');});
+socket.on('error',d=>toast('❌ '+d.msg));
+
+// ═══════════════════════════════════════
+//  GAME END
+// ═══════════════════════════════════════
+socket.on('game_ended',data=>{
+  const dur=stopTimer();
+  document.getElementById('gameDur').textContent=`⏱ مدة المباراة: ${dur}`;
+
+  const medals=['🥇','🥈','🥉'],mc=['gm','sm','bm'];
+
+  // فوز؟
+  if(data.ranking[0]===myPid) showConfetti();
+
+  // نتائج الفرق
+  const ts=data.team_scores||{};
+  const tb=document.getElementById('teamScoreBox');
+  if(Object.keys(ts).length>1){
+    const sorted=Object.entries(ts).sort((a,b)=>b[1]-a[1]);
+    tb.innerHTML=`<div style="background:var(--mb);border-radius:10px;padding:11px;border:1.5px solid #88ccff">
+      <div style="color:#88ccff;font-size:.8rem;font-weight:700;text-align:center;margin-bottom:7px">🏆 نتائج الفرق</div>
+      ${sorted.map(([tid,score],i)=>{
+        const col=tid==='A'?'var(--ta)':'var(--tb)';
+        const members=(data.tlist||[])[tid.charCodeAt(0)-65]||[];
+        return `<div style="padding:5px 0;border-bottom:1px solid var(--ab)">
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:${col};font-weight:700">${i===0?'🥇':''} الفريق ${tid}</span>
+            <span style="color:var(--gold);font-weight:700">${score} نقطة</span>
+          </div>
+          <div style="color:#88aadd;font-size:.7rem;margin-top:2px">${members.map(p=>`${data.pnames[p]||p}: ${data.scores[p]||0}`).join(' · ')}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }else tb.innerHTML='';
+
+  document.getElementById('scoreList').innerHTML=data.ranking.map((pid,i)=>{
+    const d2=data.details[pid];
+    const tn=data.tnames?.[pid]||'';
+    return `<div class="sc-card ${i===0?'win-pop':''}">
+      <div class="sc-rank ${mc[i]||''}">${medals[i]||`#${i+1}`}</div>
+      <div class="sc-nm">${eh(data.pnames[pid]||pid)}</div>
+      ${tn&&!tn.includes('solo')?`<div style="color:#88ccff;font-size:.74rem;text-align:center">🤝 ${tn}</div>`:''}
+      <div class="sc-pts">${data.scores[pid]} نقطة</div>
+      ${d2?`<div class="sc-bd"><span>📦 ${d2.no_pts.length}</span><span>⭐ ${d2.with_pts.length}</span></div>`:''}
+    </div>`;
+  }).join('');
+
+  showS('scoreSc');
+});
+
+function playAgn(){if(curSrvId)enterLob(curSrvId,'الخادم');else showS('srvSc');}
+function exitG(){curSrvId=null;stopTimer();socket.emit('leave_server',{server_id:curSrvId,user_id:uid});showS('srvSc');loadSrvs();}
+
+setInterval(()=>{
+  if(document.getElementById('srvSc').classList.contains('active')) loadSrvs();
+},8000);
+</script>
+</body>
+</html>
+HTMLEOF
+echo "Done: $(wc -l < /home/claude/mj4/index.html) lines"
+Output
+
+Done: 1279 lines
+Done
